@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>リアルタイム動画検出サンプル（handtrack.js）</title>
+  </head>
+  <body>
+    <!-- リアルタイム検出を停止するためのボタン -->
+    <button id="stop">ストップ</button><br />
+
+    <canvas id="mycanvas" width="480" height="320"></canvas>
+    <video id="myvideo" width="480" height="320"></video>
+
+    <script src="https://cdn.jsdelivr.net/npm/handtrackjs@0.0.13/dist/handtrack.min.js"></script>
+    <script>
+      const canvas = document.getElementById("mycanvas");
+      const ctx = canvas.getContext("2d");
+      const video = document.getElementById("myvideo");
+
+      const options = {
+        flipHorizontal: false, // 水平方向の反転
+        maxNumBoxes: 3, // 検出するボックスの最大数
+        scoreThreshold: 0.65 // 予測信頼度のしきい値
+      };
+
+      let state = true;
+      let model;  // 繰り返し利用するために読み込んだ機械学習モデルを格納しておく
+
+      document.getElementById("stop").addEventListener("click", stopEvent);
+
+      ctx.font = "18pt Arial";
+      ctx.fillText("モデル読込中...", 50, 50);
+
+      
+      handTrack.load(options).then(function(model_data) {
+        model = model_data;
+
+        // Webカメラを起動する
+        handTrack.startVideo(video).then(function(status) {
+          if (status) {
+            startDetection();
+          } else {
+            console.log("ビデオエラーが検出されました...", status);
+          }
+        });
+      });
+
+      // 「手」の検出と結果の出力を繰り返し実行する
+      function startDetection() {
+        model.detect(video).then(predictions => {
+          model.renderPredictions(predictions, canvas, ctx, video);
+
+          if (state) requestAnimationFrame(startDetection);
+        });
+      }
+
+      // 停止ボタンが押された時にリアルタイム検出の処理を中断する
+      function stopEvent() {
+        handTrack.stopVideo(video);
+        state = false;
+      }
+    </script>
+  </body>
+</html>
